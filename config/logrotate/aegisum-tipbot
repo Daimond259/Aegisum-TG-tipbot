@@ -1,0 +1,43 @@
+# Logrotate configuration for Aegisum Tip Bot
+/home/tipbot/Aegisum-TG-tipbot/logs/*.log {
+    # Rotate daily
+    daily
+    
+    # Keep 30 days of logs
+    rotate 30
+    
+    # Compress old logs
+    compress
+    delaycompress
+    
+    # Don't rotate if empty
+    notifempty
+    
+    # Don't fail if log file is missing
+    missingok
+    
+    # Create new log files with specific permissions
+    create 644 tipbot tipbot
+    
+    # Use date as suffix
+    dateext
+    dateformat -%Y%m%d
+    
+    # Copy and truncate instead of moving (safer for running processes)
+    copytruncate
+    
+    # Run post-rotation script
+    postrotate
+        # Send USR1 signal to reload logs (if the application supports it)
+        # systemctl reload aegisum-tipbot || true
+        
+        # Alternative: restart the service if log reloading is not supported
+        # systemctl restart aegisum-tipbot || true
+        
+        # For now, we use copytruncate so no action needed
+        /bin/true
+    endscript
+    
+    # Shared scripts for all log files
+    sharedscripts
+}

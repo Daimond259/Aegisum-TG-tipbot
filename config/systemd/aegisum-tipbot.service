@@ -1,0 +1,53 @@
+[Unit]
+Description=Aegisum Telegram Tip Bot
+Documentation=https://github.com/Daimond259/Aegisum-TG-tipbot
+After=network.target network-online.target
+Wants=network-online.target
+# Wait for blockchain services to start
+After=aegisum.service shic.service pepe.service advc.service
+Wants=aegisum.service shic.service pepe.service advc.service
+
+[Service]
+Type=simple
+User=tipbot
+Group=tipbot
+WorkingDirectory=/home/tipbot/Aegisum-TG-tipbot
+ExecStart=/usr/bin/node src/index.js
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/tipbot/Aegisum-TG-tipbot/data /home/tipbot/Aegisum-TG-tipbot/logs
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Environment
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS="--max-old-space-size=2048"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aegisum-tipbot
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
