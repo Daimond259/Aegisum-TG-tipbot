@@ -1,8 +1,12 @@
 const crypto = require('crypto');
 const CryptoJS = require('crypto-js');
 const bip39 = require('bip39');
-const bip32 = require('bip32');
+const { BIP32Factory } = require('bip32');
 const bitcoin = require('bitcoinjs-lib');
+const ecc = require('tiny-secp256k1');
+
+// Initialize BIP32 with secp256k1
+const bip32 = BIP32Factory(ecc);
 
 class CryptoUtils {
     constructor() {
