@@ -34,7 +34,7 @@ async function testAllCoinsFixed() {
             console.log(`✅ Wallet created: ${walletResult.address}`);
             
             // Test 2: Validate address format
-            const rpcClient = blockchainManager.getRpcClient(coin);
+            const rpcClient = blockchainManager.clients[coin];
             const addressInfo = await rpcClient.validateAddress(walletResult.address);
             console.log(`🔍 Address validation:`, {
                 isValid: addressInfo.isvalid,
