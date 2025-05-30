@@ -7,6 +7,7 @@ class BlockchainManager {
         this.clients = new Map();
         this.supportedCoins = ['AEGS', 'SHIC', 'PEPE', 'ADVC'];
         this.logger = logger;
+        this.addressCache = new Map(); // Temporary in-memory cache for addresses
         this.initializeClients();
     }
 
@@ -287,29 +288,77 @@ class BlockchainManager {
         }
     }
 
+    // Address storage methods (using in-memory cache for now)
+    async getUserAddressFromDB(telegramId, coinSymbol) {
+        try {
+            const cacheKey = `${telegramId}_${coinSymbol}`;
+            const cachedAddress = this.addressCache.get(cacheKey);
+            if (cachedAddress) {
+                this.logger.info(`Found cached address for user ${telegramId} on ${coinSymbol}: ${cachedAddress}`);
+                return cachedAddress;
+            }
+            return null;
+        } catch (error) {
+            this.logger.error(`Failed to get user address from cache:`, error);
+            return null;
+        }
+    }
+
+    async storeUserAddressInDB(telegramId, coinSymbol, address) {
+        try {
+            const cacheKey = `${telegramId}_${coinSymbol}`;
+            this.addressCache.set(cacheKey, address);
+            this.logger.info(`Stored address in cache: user ${telegramId}, ${coinSymbol}, ${address}`);
+            return true;
+        } catch (error) {
+            this.logger.error(`Failed to store user address in cache:`, error);
+            return false;
+        }
+    }
+
     // Wallet management methods
     async createUserWallet(telegramId, coinSymbol) {
         try {
             const client = this.getClient(coinSymbol);
-            const accountName = `user_${telegramId}`;
+            const labelName = `user_${telegramId}`;
             
-            // CRITICAL FIX: Generate address in the current "tipbot" wallet
-            // Use getnewaddress with account label to ensure it's in our wallet
-            const address = await client.getNewAddress(accountName);
-            
-            // Verify the address is actually owned by our wallet
-            const addressInfo = await client.getAddressInfo(address);
-            if (!addressInfo.ismine) {
-                throw new Error(`Generated address ${address} is not owned by tipbot wallet!`);
+            // Check if we already have an address for this user in database
+            const existingAddress = await this.getUserAddressFromDB(telegramId, coinSymbol);
+            if (existingAddress) {
+                // Verify it's still owned by our wallet
+                const addressInfo = await client.getAddressInfo(existingAddress);
+                if (addressInfo.ismine) {
+                    this.logger.info(`Using existing wallet for user ${telegramId} on ${coinSymbol}: ${existingAddress}`);
+                    return {
+                        address: existingAddress,
+                        coinSymbol,
+                        telegramId,
+                        labelName,
+                        ismine: addressInfo.ismine
+                    };
+                }
             }
             
-            this.logger.info(`Generated OWNED address for user ${telegramId} on ${coinSymbol}: ${address} (ismine: ${addressInfo.ismine})`);
+            // Generate new address with label
+            const address = await client.getNewAddress(labelName);
+            
+            // Verify the address is owned by our wallet
+            const addressInfo = await client.getAddressInfo(address);
+            if (!addressInfo.ismine) {
+                throw new Error(`Generated address ${address} is not owned by wallet`);
+            }
+            
+            // Store address in database for future retrieval
+            await this.storeUserAddressInDB(telegramId, coinSymbol, address);
+            
+            this.logger.info(`Created wallet for user ${telegramId} on ${coinSymbol}: ${address}`);
             
             return {
                 address,
-                walletName: 'tipbot', // Use the main tipbot wallet
                 coinSymbol,
-                accountName
+                telegramId,
+                labelName,
+                ismine: addressInfo.ismine
             };
             
         } catch (error) {
@@ -320,28 +369,9 @@ class BlockchainManager {
 
     async getUserWalletAddress(telegramId, coinSymbol) {
         try {
-            const client = this.getClient(coinSymbol);
-            const accountName = `user_${telegramId}`;
-            
-            // Try to get existing addresses for this account
-            try {
-                const addresses = await client.getAddressesByAccount(accountName);
-                
-                // Return the first address if any exist
-                if (addresses && addresses.length > 0) {
-                    // Verify it's still owned by our wallet
-                    const addressInfo = await client.getAddressInfo(addresses[0]);
-                    if (addressInfo.ismine) {
-                        return addresses[0];
-                    }
-                }
-            } catch (error) {
-                // Account doesn't exist or no addresses found
-                this.logger.debug(`No existing addresses for account ${accountName}: ${error.message}`);
-            }
-            
-            // If no existing address or not owned, create a new one
-            return await this.createUserWallet(telegramId, coinSymbol).then(result => result.address);
+            // Simply use createUserWallet which now handles caching and consistency
+            const walletResult = await this.createUserWallet(telegramId, coinSymbol);
+            return walletResult.address;
             
         } catch (error) {
             this.logger.error(`Failed to get wallet address for user ${telegramId} on ${coinSymbol}:`, error);
