@@ -3,12 +3,12 @@ require('dotenv').config();
 const Database = require('./database/database');
 const BlockchainManager = require('./blockchain/blockchain-manager');
 const WalletManager = require('./wallet/wallet-manager');
-const AegisumTelegramBot = require('./bot/telegram-bot');
+const CommunityTipBot = require('./bot/telegram-bot');
 const WorkerManager = require('./workers');
 const ValidationUtils = require('./utils/validation');
 const logger = require('./utils/logger');
 
-class AegisumTipBot {
+class CommunityTipBotApp {
     constructor() {
         this.db = null;
         this.blockchain = null;
@@ -20,7 +20,7 @@ class AegisumTipBot {
 
     async initialize() {
         try {
-            logger.info('Initializing Aegisum Tip Bot...');
+            logger.info('Initializing Community Tip Bot...');
 
             // Validate environment variables
             ValidationUtils.validateEnvironment();
@@ -57,7 +57,7 @@ class AegisumTipBot {
                 throw new Error('TELEGRAM_BOT_TOKEN is required');
             }
             
-            this.bot = new AegisumTelegramBot(botToken, this.db, this.wallet, this.blockchain);
+            this.bot = new CommunityTipBot(botToken, this.db, this.wallet, this.blockchain);
 
             // Initialize workers
             logger.info('Initializing background workers...');
@@ -91,7 +91,7 @@ class AegisumTipBot {
             // Setup graceful shutdown
             this.setupGracefulShutdown();
 
-            logger.info('🚀 Aegisum Tip Bot is now running!');
+            logger.info('🚀 Community Tip Bot is now running!');
             console.log('🤖 Bot is active and monitoring...');
             console.log('📊 Use Ctrl+C to stop gracefully');
 
@@ -110,7 +110,7 @@ class AegisumTipBot {
                 return;
             }
 
-            logger.info('Stopping Aegisum Tip Bot...');
+            logger.info('Stopping Community Tip Bot...');
 
             this.isRunning = false;
 
@@ -129,7 +129,7 @@ class AegisumTipBot {
                 await this.db.close();
             }
 
-            logger.info('Aegisum Tip Bot stopped successfully');
+            logger.info('Community Tip Bot stopped successfully');
 
         } catch (error) {
             logger.error('Error during shutdown:', error);
@@ -232,7 +232,7 @@ class AegisumTipBot {
 
 // Create and start the bot if this file is run directly
 if (require.main === module) {
-    const bot = new AegisumTipBot();
+    const bot = new CommunityTipBotApp();
     
     bot.initialize()
         .then(() => bot.start())
@@ -242,4 +242,4 @@ if (require.main === module) {
         });
 }
 
-module.exports = AegisumTipBot;
+module.exports = CommunityTipBotApp;

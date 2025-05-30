@@ -2,7 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const logger = require('../utils/logger');
 const ValidationUtils = require('../utils/validation');
 
-class AegisumTelegramBot {
+class CommunityTipBot {
     constructor(token, database, walletManager, blockchainManager) {
         this.bot = new TelegramBot(token, { polling: true });
         this.db = database;
@@ -15,6 +15,29 @@ class AegisumTelegramBot {
         this.setupCommands();
         this.setupCallbackHandlers();
         this.setupErrorHandling();
+    }
+
+    // Add footer to all bot messages
+    addFooter(message) {
+        return `${message}\n\n<i>Powered by Aegisum Eco System</i>`;
+    }
+
+    // Enhanced sendMessage with automatic footer
+    async sendMessage(chatId, text, options = {}) {
+        const messageWithFooter = this.addFooter(text);
+        return await this.bot.sendMessage(chatId, messageWithFooter, {
+            parse_mode: 'HTML',
+            ...options
+        });
+    }
+
+    // Enhanced editMessageText with automatic footer
+    async editMessageText(text, options = {}) {
+        const messageWithFooter = this.addFooter(text);
+        return await this.bot.editMessageText(messageWithFooter, {
+            parse_mode: 'HTML',
+            ...options
+        });
     }
 
     setupCommands() {
@@ -83,7 +106,7 @@ class AegisumTelegramBot {
 
         const isApproved = await this.db.isGroupApproved(msg.chat.id);
         if (!isApproved) {
-            await this.bot.sendMessage(msg.chat.id, 
+            await this.sendMessage(msg.chat.id, 
                 '❌ This group is not approved for bot usage. Contact an admin to add this group.');
             return false;
         }
@@ -114,7 +137,7 @@ class AegisumTelegramBot {
             const hasWallet = await this.wallet.hasWallet(msg.from.id);
             
             if (hasWallet) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '👛 Welcome back! Your wallet is already set up.\n\n' +
                     'Use /balance to check your balances or /help for available commands.');
                 return;
@@ -129,7 +152,7 @@ class AegisumTelegramBot {
                 ]
             };
 
-            await this.bot.sendMessage(msg.chat.id,
+            await this.sendMessage(msg.chat.id,
                 '🌟 Welcome to Aegisum Tip Bot!\n\n' +
                 '🪙 Supported coins: AEGS, SHIC, PEPE, ADVC\n\n' +
                 '🔐 This bot creates non-custodial wallets - you control your private keys!\n\n' +
@@ -139,7 +162,7 @@ class AegisumTelegramBot {
 
         } catch (error) {
             this.logger.error('Start command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ An error occurred. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ An error occurred. Please try again.');
         }
     }
 
@@ -151,7 +174,7 @@ class AegisumTelegramBot {
             
             const hasWallet = await this.wallet.hasWallet(msg.from.id);
             if (!hasWallet) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ You don\'t have a wallet yet. Use /start to create one.');
                 return;
             }
@@ -173,11 +196,11 @@ class AegisumTelegramBot {
 
             message += '\n💡 Use /deposit to get your deposit addresses';
 
-            await this.bot.sendMessage(msg.chat.id, message);
+            await this.sendMessage(msg.chat.id, message);
 
         } catch (error) {
             this.logger.error('Balance command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Failed to get balances. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ Failed to get balances. Please try again.');
         }
     }
 
@@ -189,7 +212,7 @@ class AegisumTelegramBot {
             
             const hasWallet = await this.wallet.hasWallet(msg.from.id);
             if (!hasWallet) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ You don\'t have a wallet yet. Use /start to create one.');
                 return;
             }
@@ -204,11 +227,11 @@ class AegisumTelegramBot {
 
             message += '⚠️ Only send the corresponding coin to each address!';
 
-            await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+            await this.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
 
         } catch (error) {
             this.logger.error('Deposit command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Failed to get deposit addresses. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ Failed to get deposit addresses. Please try again.');
         }
     }
 
@@ -218,7 +241,7 @@ class AegisumTelegramBot {
             
             const params = match[1].split(' ');
             if (params.length !== 3) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ Usage: /withdraw <coin> <amount> <address>\n' +
                     'Example: /withdraw AEGS 10.5 AegsAddress123...');
                 return;
@@ -232,7 +255,7 @@ class AegisumTelegramBot {
             });
 
             if (!validation.valid) {
-                await this.bot.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
+                await this.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
                 return;
             }
 
@@ -240,7 +263,7 @@ class AegisumTelegramBot {
             
             const hasWallet = await this.wallet.hasWallet(msg.from.id);
             if (!hasWallet) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ You don\'t have a wallet yet. Use /start to create one.');
                 return;
             }
@@ -254,12 +277,12 @@ class AegisumTelegramBot {
                 chatId: msg.chat.id
             });
 
-            await this.bot.sendMessage(msg.chat.id, 
+            await this.sendMessage(msg.chat.id, 
                 '🔐 Please enter your wallet password to confirm the withdrawal:');
 
         } catch (error) {
             this.logger.error('Withdraw command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Withdrawal failed. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ Withdrawal failed. Please try again.');
         }
     }
 
@@ -270,14 +293,14 @@ class AegisumTelegramBot {
             // Check cooldown
             const cooldown = await this.checkCooldown(msg.from.id, msg.chat.id, 'tip');
             if (cooldown.onCooldown) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     `⏰ Please wait ${cooldown.seconds} seconds between tips.`);
                 return;
             }
 
             const params = match[1].split(' ');
             if (params.length !== 3) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ Usage: /tip @username <coin> <amount>\n' +
                     'Example: /tip @alice AEGS 5.0');
                 return;
@@ -295,7 +318,7 @@ class AegisumTelegramBot {
             });
 
             if (!validation.valid) {
-                await this.bot.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
+                await this.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
                 return;
             }
 
@@ -308,13 +331,13 @@ class AegisumTelegramBot {
             );
 
             if (!recipientUser) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ Recipient not found. They need to start the bot first.');
                 return;
             }
 
             if (recipientUser.telegram_id === msg.from.id) {
-                await this.bot.sendMessage(msg.chat.id, '❌ You cannot tip yourself!');
+                await this.sendMessage(msg.chat.id, '❌ You cannot tip yourself!');
                 return;
             }
 
@@ -324,7 +347,7 @@ class AegisumTelegramBot {
             // Check sender balance
             const balances = await this.wallet.getUserBalances(msg.from.id);
             if (balances[coinSymbol].confirmed < amount) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     `❌ Insufficient ${coinSymbol} balance. You have ${ValidationUtils.formatAmount(balances[coinSymbol].confirmed)} ${coinSymbol}`);
                 return;
             }
@@ -342,13 +365,13 @@ class AegisumTelegramBot {
                 const senderName = msg.from.username || msg.from.first_name;
                 const recipientName = recipientUser.username || recipientUser.first_name;
                 
-                await this.bot.sendMessage(msg.chat.id,
+                await this.sendMessage(msg.chat.id,
                     `✅ ${senderName} tipped ${ValidationUtils.formatAmount(amount)} ${coinSymbol} to ${recipientName}! 🎉`);
                 
                 // Notify recipient if in private chat
                 if (msg.chat.type === 'private') {
                     try {
-                        await this.bot.sendMessage(recipientUser.telegram_id,
+                        await this.sendMessage(recipientUser.telegram_id,
                             `🎉 You received a tip of ${ValidationUtils.formatAmount(amount)} ${coinSymbol} from ${senderName}!`);
                     } catch (error) {
                         // Recipient might have blocked the bot
@@ -359,7 +382,7 @@ class AegisumTelegramBot {
 
         } catch (error) {
             this.logger.error('Tip command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Tip failed. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ Tip failed. Please try again.');
         }
     }
 
@@ -368,21 +391,21 @@ class AegisumTelegramBot {
             if (!await this.checkGroupPermissions(msg)) return;
             
             if (msg.chat.type === 'private') {
-                await this.bot.sendMessage(msg.chat.id, '❌ Rain can only be used in groups.');
+                await this.sendMessage(msg.chat.id, '❌ Rain can only be used in groups.');
                 return;
             }
 
             // Check cooldown
             const cooldown = await this.checkCooldown(msg.from.id, msg.chat.id, 'rain');
             if (cooldown.onCooldown) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     `⏰ Please wait ${cooldown.seconds} seconds between rain commands.`);
                 return;
             }
 
             const params = match[1].split(' ');
             if (params.length !== 2) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ Usage: /rain <coin> <amount>\n' +
                     'Example: /rain AEGS 50.0');
                 return;
@@ -395,7 +418,7 @@ class AegisumTelegramBot {
             });
 
             if (!validation.valid) {
-                await this.bot.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
+                await this.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
                 return;
             }
 
@@ -407,7 +430,7 @@ class AegisumTelegramBot {
             // Check sender balance
             const balances = await this.wallet.getUserBalances(msg.from.id);
             if (balances[coinSymbol].confirmed < amount) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     `❌ Insufficient ${coinSymbol} balance. You have ${ValidationUtils.formatAmount(balances[coinSymbol].confirmed)} ${coinSymbol}`);
                 return;
             }
@@ -421,13 +444,13 @@ class AegisumTelegramBot {
             `, [msg.from.id]);
 
             if (activeUsers.length === 0) {
-                await this.bot.sendMessage(msg.chat.id, '❌ No active users found for rain.');
+                await this.sendMessage(msg.chat.id, '❌ No active users found for rain.');
                 return;
             }
 
             const amountPerUser = amount / activeUsers.length;
             if (amountPerUser < 0.00000001) {
-                await this.bot.sendMessage(msg.chat.id, '❌ Amount too small to distribute.');
+                await this.sendMessage(msg.chat.id, '❌ Amount too small to distribute.');
                 return;
             }
 
@@ -449,13 +472,13 @@ class AegisumTelegramBot {
             }
 
             const senderName = msg.from.username || msg.from.first_name;
-            await this.bot.sendMessage(msg.chat.id,
+            await this.sendMessage(msg.chat.id,
                 `🌧️ ${senderName} made it rain ${ValidationUtils.formatAmount(amount)} ${coinSymbol}!\n` +
                 `💰 ${successCount} users received ${ValidationUtils.formatAmount(amountPerUser)} ${coinSymbol} each! 🎉`);
 
         } catch (error) {
             this.logger.error('Rain command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Rain failed. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ Rain failed. Please try again.');
         }
     }
 
@@ -464,21 +487,21 @@ class AegisumTelegramBot {
             if (!await this.checkGroupPermissions(msg)) return;
             
             if (msg.chat.type === 'private') {
-                await this.bot.sendMessage(msg.chat.id, '❌ Airdrops can only be used in groups.');
+                await this.sendMessage(msg.chat.id, '❌ Airdrops can only be used in groups.');
                 return;
             }
 
             // Check cooldown
             const cooldown = await this.checkCooldown(msg.from.id, msg.chat.id, 'airdrop');
             if (cooldown.onCooldown) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     `⏰ Please wait ${cooldown.seconds} seconds between airdrop commands.`);
                 return;
             }
 
             const params = match[1].split(' ');
             if (params.length !== 3) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ Usage: /airdrop <coin> <amount> <duration_minutes>\n' +
                     'Example: /airdrop AEGS 100.0 5');
                 return;
@@ -492,7 +515,7 @@ class AegisumTelegramBot {
             });
 
             if (!validation.valid) {
-                await this.bot.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
+                await this.sendMessage(msg.chat.id, '❌ ' + validation.errors.join('\n'));
                 return;
             }
 
@@ -505,7 +528,7 @@ class AegisumTelegramBot {
             // Check sender balance
             const balances = await this.wallet.getUserBalances(msg.from.id);
             if (balances[coinSymbol].confirmed < amount) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     `❌ Insufficient ${coinSymbol} balance. You have ${ValidationUtils.formatAmount(balances[coinSymbol].confirmed)} ${coinSymbol}`);
                 return;
             }
@@ -517,7 +540,7 @@ class AegisumTelegramBot {
             };
 
             const senderName = msg.from.username || msg.from.first_name;
-            const airdropMsg = await this.bot.sendMessage(msg.chat.id,
+            const airdropMsg = await this.sendMessage(msg.chat.id,
                 `🎁 AIRDROP STARTED! 🎁\n\n` +
                 `💰 Amount: ${ValidationUtils.formatAmount(amount)} ${coinSymbol}\n` +
                 `⏰ Duration: ${duration} minutes\n` +
@@ -539,7 +562,7 @@ class AegisumTelegramBot {
 
         } catch (error) {
             this.logger.error('Airdrop command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Airdrop creation failed. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ Airdrop creation failed. Please try again.');
         }
     }
 
@@ -551,7 +574,7 @@ class AegisumTelegramBot {
             
             const hasWallet = await this.wallet.hasWallet(msg.from.id);
             if (!hasWallet) {
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '❌ You don\'t have a wallet yet. Use /start to create one.');
                 return;
             }
@@ -559,7 +582,7 @@ class AegisumTelegramBot {
             const transactions = await this.wallet.getTransactionHistory(msg.from.id, 10);
             
             if (transactions.length === 0) {
-                await this.bot.sendMessage(msg.chat.id, '📜 No transaction history found.');
+                await this.sendMessage(msg.chat.id, '📜 No transaction history found.');
                 return;
             }
 
@@ -579,11 +602,11 @@ class AegisumTelegramBot {
                 message += '\n';
             });
 
-            await this.bot.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
+            await this.sendMessage(msg.chat.id, message, { parse_mode: 'Markdown' });
 
         } catch (error) {
             this.logger.error('History command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Failed to get transaction history. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ Failed to get transaction history. Please try again.');
         }
     }
 
@@ -618,33 +641,33 @@ AEGS, SHIC, PEPE, ADVC
 💡 Need help? Contact the admins!
         `;
 
-        await this.bot.sendMessage(msg.chat.id, helpText);
+        await this.sendMessage(msg.chat.id, helpText);
     }
 
     // Admin command handlers
     async handleSetGroups(msg) {
         if (!this.isAdmin(msg.from.id)) {
-            await this.bot.sendMessage(msg.chat.id, '❌ Admin access required.');
+            await this.sendMessage(msg.chat.id, '❌ Admin access required.');
             return;
         }
 
         if (msg.chat.type === 'private') {
-            await this.bot.sendMessage(msg.chat.id, '❌ Use this command in the group you want to approve.');
+            await this.sendMessage(msg.chat.id, '❌ Use this command in the group you want to approve.');
             return;
         }
 
         try {
             await this.db.addApprovedGroup(msg.chat.id, msg.chat.title);
-            await this.bot.sendMessage(msg.chat.id, '✅ This group has been approved for bot usage.');
+            await this.sendMessage(msg.chat.id, '✅ This group has been approved for bot usage.');
         } catch (error) {
             this.logger.error('Set groups error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Failed to approve group.');
+            await this.sendMessage(msg.chat.id, '❌ Failed to approve group.');
         }
     }
 
     async handleStatus(msg) {
         if (!this.isAdmin(msg.from.id)) {
-            await this.bot.sendMessage(msg.chat.id, '❌ Admin access required.');
+            await this.sendMessage(msg.chat.id, '❌ Admin access required.');
             return;
         }
 
@@ -664,11 +687,11 @@ AEGS, SHIC, PEPE, ADVC
                 }
             }
 
-            await this.bot.sendMessage(msg.chat.id, message);
+            await this.sendMessage(msg.chat.id, message);
 
         } catch (error) {
             this.logger.error('Status command error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ Failed to get status.');
+            await this.sendMessage(msg.chat.id, '❌ Failed to get status.');
         }
     }
 
@@ -691,7 +714,7 @@ AEGS, SHIC, PEPE, ADVC
             }
         } catch (error) {
             this.logger.error('Message handling error:', error);
-            await this.bot.sendMessage(msg.chat.id, '❌ An error occurred. Please try again.');
+            await this.sendMessage(msg.chat.id, '❌ An error occurred. Please try again.');
             this.userSessions.delete(msg.from.id);
         }
     }
@@ -705,14 +728,14 @@ AEGS, SHIC, PEPE, ADVC
         try {
             if (data === 'create_wallet') {
                 this.userSessions.set(userId, { action: 'create_wallet_password' });
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '🔐 Please enter a strong password for your wallet:\n\n' +
                     '• At least 8 characters\n' +
                     '• Include letters and numbers\n' +
                     '• Keep it safe - you\'ll need it to access your funds!');
             } else if (data === 'restore_wallet') {
                 this.userSessions.set(userId, { action: 'restore_wallet_mnemonic' });
-                await this.bot.sendMessage(msg.chat.id, 
+                await this.sendMessage(msg.chat.id, 
                     '🔄 Please enter your 12 or 24-word backup phrase:');
             } else if (data === 'join_airdrop') {
                 await this.processJoinAirdrop(callbackQuery);
@@ -739,14 +762,14 @@ AEGS, SHIC, PEPE, ADVC
 
         const passwordValidation = ValidationUtils.isValidPassword(password);
         if (!passwordValidation.valid) {
-            await this.bot.sendMessage(msg.chat.id, '❌ ' + passwordValidation.message);
+            await this.sendMessage(msg.chat.id, '❌ ' + passwordValidation.message);
             return;
         }
 
         const result = await this.wallet.createWallet(msg.from.id, password);
         
         if (result.success) {
-            await this.bot.sendMessage(msg.chat.id, 
+            await this.sendMessage(msg.chat.id, 
                 '✅ Wallet created successfully!\n\n' +
                 '🔑 BACKUP PHRASE (SAVE THIS SAFELY!):\n' +
                 `\`${result.mnemonic}\`\n\n` +
@@ -770,7 +793,7 @@ AEGS, SHIC, PEPE, ADVC
         }
 
         if (!ValidationUtils.isValidMnemonic(mnemonic)) {
-            await this.bot.sendMessage(msg.chat.id, 
+            await this.sendMessage(msg.chat.id, 
                 '❌ Invalid backup phrase. Please enter 12 or 24 words.');
             return;
         }
@@ -779,7 +802,7 @@ AEGS, SHIC, PEPE, ADVC
         session.action = 'restore_wallet_password';
         this.userSessions.set(msg.from.id, session);
 
-        await this.bot.sendMessage(msg.chat.id, 
+        await this.sendMessage(msg.chat.id, 
             '🔐 Now enter a password for your restored wallet:');
     }
 
@@ -795,14 +818,14 @@ AEGS, SHIC, PEPE, ADVC
 
         const passwordValidation = ValidationUtils.isValidPassword(password);
         if (!passwordValidation.valid) {
-            await this.bot.sendMessage(msg.chat.id, '❌ ' + passwordValidation.message);
+            await this.sendMessage(msg.chat.id, '❌ ' + passwordValidation.message);
             return;
         }
 
         const result = await this.wallet.restoreWallet(msg.from.id, session.mnemonic, password);
         
         if (result.success) {
-            await this.bot.sendMessage(msg.chat.id, 
+            await this.sendMessage(msg.chat.id, 
                 '✅ Wallet restored successfully!\n\n' +
                 'Use /balance to check your balances.');
         }
@@ -829,7 +852,7 @@ AEGS, SHIC, PEPE, ADVC
         );
 
         if (result.success) {
-            await this.bot.sendMessage(session.chatId,
+            await this.sendMessage(session.chatId,
                 `✅ Withdrawal successful!\n\n` +
                 `💰 Amount: ${ValidationUtils.formatAmount(session.amount)} ${session.coin}\n` +
                 `📍 To: \`${session.address}\`\n` +
@@ -897,4 +920,4 @@ AEGS, SHIC, PEPE, ADVC
     }
 }
 
-module.exports = AegisumTelegramBot;
+module.exports = CommunityTipBot;
