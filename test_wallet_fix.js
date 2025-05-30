@@ -7,15 +7,15 @@
  * are actually owned by the tipbot wallet.
  */
 
+require('dotenv').config();
 const BlockchainManager = require('./src/blockchain/blockchain-manager');
-const config = require('./src/config/config');
 
 async function testWalletFix() {
     console.log('🔧 TESTING WALLET OWNERSHIP FIX...\n');
     
     try {
         // Initialize blockchain manager
-        const blockchain = new BlockchainManager(config.rpc);
+        const blockchain = new BlockchainManager();
         
         // Test with AEGS (the coin that had the problem)
         const testCoin = 'AEGS';
