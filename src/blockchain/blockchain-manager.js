@@ -291,26 +291,25 @@ class BlockchainManager {
     async createUserWallet(telegramId, coinSymbol) {
         try {
             const client = this.getClient(coinSymbol);
-            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            const accountName = `user_${telegramId}`;
             
-            // Try to create a new wallet (for newer daemon versions)
-            try {
-                await client.createWallet(walletName, false, false, '');
-                this.logger.info(`Created new wallet ${walletName} for ${coinSymbol}`);
-            } catch (error) {
-                // If createwallet fails, use account-based approach (older daemons)
-                this.logger.info(`Using account-based wallet for ${coinSymbol} user ${telegramId}`);
+            // CRITICAL FIX: Generate address in the current "tipbot" wallet
+            // Use getnewaddress with account label to ensure it's in our wallet
+            const address = await client.getNewAddress(accountName);
+            
+            // Verify the address is actually owned by our wallet
+            const addressInfo = await client.getAddressInfo(address);
+            if (!addressInfo.ismine) {
+                throw new Error(`Generated address ${address} is not owned by tipbot wallet!`);
             }
             
-            // Generate a new address for this user
-            const address = await client.getAccountAddress(walletName);
-            
-            this.logger.info(`Generated address for user ${telegramId} on ${coinSymbol}:`, address);
+            this.logger.info(`Generated OWNED address for user ${telegramId} on ${coinSymbol}: ${address} (ismine: ${addressInfo.ismine})`);
             
             return {
                 address,
-                walletName,
-                coinSymbol
+                walletName: 'tipbot', // Use the main tipbot wallet
+                coinSymbol,
+                accountName
             };
             
         } catch (error) {
@@ -322,11 +321,23 @@ class BlockchainManager {
     async getUserWalletAddress(telegramId, coinSymbol) {
         try {
             const client = this.getClient(coinSymbol);
-            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            const accountName = `user_${telegramId}`;
             
             // Try to get existing address for this account
-            const address = await client.getAccountAddress(walletName);
-            return address;
+            try {
+                const address = await client.getAccountAddress(accountName);
+                
+                // Verify it's still owned by our wallet
+                const addressInfo = await client.getAddressInfo(address);
+                if (addressInfo.ismine) {
+                    return address;
+                }
+            } catch (error) {
+                // Account doesn't exist or address not found
+            }
+            
+            // If no existing address or not owned, create a new one
+            return await this.createUserWallet(telegramId, coinSymbol).then(result => result.address);
             
         } catch (error) {
             this.logger.error(`Failed to get wallet address for user ${telegramId} on ${coinSymbol}:`, error);
@@ -337,10 +348,10 @@ class BlockchainManager {
     async getUserWalletBalance(telegramId, coinSymbol) {
         try {
             const client = this.getClient(coinSymbol);
-            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            const accountName = `user_${telegramId}`;
             
             // Get balance for this specific account
-            const balance = await client.getBalance(walletName, 1);
+            const balance = await client.getBalance(accountName, 1);
             return balance || 0;
             
         } catch (error) {
@@ -352,7 +363,7 @@ class BlockchainManager {
     async sendFromUserWallet(telegramId, toAddress, amount, coinSymbol) {
         try {
             const client = this.getClient(coinSymbol);
-            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            const accountName = `user_${telegramId}`;
             
             // Check balance first
             const balance = await this.getUserWalletBalance(telegramId, coinSymbol);
@@ -361,14 +372,14 @@ class BlockchainManager {
             }
             
             // Send from this specific account
-            const txid = await client.sendToAddress(toAddress, amount, '', '');
+            const txid = await client.sendFrom(accountName, toAddress, amount);
             
             this.logger.info(`Sent ${amount} ${coinSymbol} from user ${telegramId} to ${toAddress}:`, txid);
             
             return {
                 txid,
                 amount,
-                from: walletName,
+                from: accountName,
                 to: toAddress,
                 coinSymbol
             };

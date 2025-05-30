@@ -147,6 +147,10 @@ class RPCClient {
         return this.call('sendmany', [fromAccount, amounts, minConfirmations, comment]);
     }
 
+    async sendFrom(fromAccount, toAddress, amount, minConfirmations = 1, comment = '', commentTo = '') {
+        return this.call('sendfrom', [fromAccount, toAddress, amount, minConfirmations, comment, commentTo]);
+    }
+
     // Fee estimation
     async estimateFee(blocks = 6) {
         try {
