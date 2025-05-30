@@ -93,7 +93,7 @@ class CommunityTipBotApp {
             this.setupGracefulShutdown();
 
             logger.info('🚀 Community Tip Bot is now running!');
-            console.log('🤖 Bot is active and monitoring...');
+            console.log('🚀 Community Tip Bot is active and monitoring...');
             console.log('📊 Use Ctrl+C to stop gracefully');
 
             // Log initial status

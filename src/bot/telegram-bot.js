@@ -620,7 +620,7 @@ class CommunityTipBot {
 
     async handleHelp(msg) {
         const helpText = `
-🤖 Aegisum Tip Bot Help
+🚀 Community Tip Bot Help
 
 💰 WALLET COMMANDS:
 /start - Create or restore wallet
@@ -918,7 +918,7 @@ AEGS, SHIC, PEPE, ADVC
     // Start the bot
     start() {
         this.logger.info('Telegram bot started');
-        console.log('🤖 Aegisum Tip Bot is running...');
+        console.log('🚀 Community Tip Bot is now running!');
     }
 
     // Stop the bot
