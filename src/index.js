@@ -58,6 +58,7 @@ class CommunityTipBotApp {
             }
             
             this.bot = new CommunityTipBot(botToken, this.db, this.wallet, this.blockchain);
+            await this.bot.initialize();
 
             // Initialize workers
             logger.info('Initializing background workers...');

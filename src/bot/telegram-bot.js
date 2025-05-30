@@ -12,9 +12,17 @@ class CommunityTipBot {
         this.adminIds = (process.env.ADMIN_TELEGRAM_IDS || '').split(',').filter(id => id);
         this.userSessions = new Map(); // Store temporary user data
         
-        this.setupCommands();
         this.setupCallbackHandlers();
         this.setupErrorHandling();
+    }
+
+    async initialize() {
+        try {
+            await this.setupCommands();
+            logger.info('Bot commands configured successfully');
+        } catch (error) {
+            logger.warn('Failed to setup bot commands:', error.message);
+        }
     }
 
     // Add footer to all bot messages
@@ -242,7 +250,7 @@ class CommunityTipBot {
             const params = match[1].split(' ');
             if (params.length !== 3) {
                 await this.sendMessage(msg.chat.id, 
-                    '❌ Usage: /withdraw <coin> <amount> <address>\n' +
+                    '❌ Usage: /withdraw [coin] [amount] [address]\n' +
                     'Example: /withdraw AEGS 10.5 AegsAddress123...');
                 return;
             }
@@ -301,7 +309,7 @@ class CommunityTipBot {
             const params = match[1].split(' ');
             if (params.length !== 3) {
                 await this.sendMessage(msg.chat.id, 
-                    '❌ Usage: /tip @username <coin> <amount>\n' +
+                    '❌ Usage: /tip @username [coin] [amount]\n' +
                     'Example: /tip @alice AEGS 5.0');
                 return;
             }
@@ -406,7 +414,7 @@ class CommunityTipBot {
             const params = match[1].split(' ');
             if (params.length !== 2) {
                 await this.sendMessage(msg.chat.id, 
-                    '❌ Usage: /rain <coin> <amount>\n' +
+                    '❌ Usage: /rain [coin] [amount]\n' +
                     'Example: /rain AEGS 50.0');
                 return;
             }
@@ -502,7 +510,7 @@ class CommunityTipBot {
             const params = match[1].split(' ');
             if (params.length !== 3) {
                 await this.sendMessage(msg.chat.id, 
-                    '❌ Usage: /airdrop <coin> <amount> <duration_minutes>\n' +
+                    '❌ Usage: /airdrop [coin] [amount] [duration_minutes]\n' +
                     'Example: /airdrop AEGS 100.0 5');
                 return;
             }
@@ -618,12 +626,12 @@ class CommunityTipBot {
 /start - Create or restore wallet
 /balance - Show your balances
 /deposit - Show deposit addresses
-/withdraw <coin> <amount> <address> - Withdraw funds
+/withdraw [coin] [amount] [address] - Withdraw funds
 
 🎁 COMMUNITY COMMANDS:
-/tip @user <coin> <amount> - Tip another user
-/rain <coin> <amount> - Distribute to active users
-/airdrop <coin> <amount> <minutes> - Create timed airdrop
+/tip @user [coin] [amount] - Tip another user
+/rain [coin] [amount] - Distribute to active users
+/airdrop [coin] [amount] [minutes] - Create timed airdrop
 
 📊 INFO COMMANDS:
 /history - Show transaction history

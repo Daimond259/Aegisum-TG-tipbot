@@ -199,6 +199,85 @@ class RPCClient {
         }
     }
 
+    // Wallet management methods
+    async createWallet(walletName, disablePrivateKeys = false, blank = false, passphrase = '') {
+        try {
+            return await this.call('createwallet', [walletName, disablePrivateKeys, blank, passphrase]);
+        } catch (error) {
+            // Some older coins don't support createwallet, fallback to loading existing
+            this.logger.warn(`createwallet not supported for ${this.coinSymbol}, using default wallet`);
+            return { name: walletName, warning: 'Using default wallet' };
+        }
+    }
+
+    async loadWallet(walletName) {
+        try {
+            return await this.call('loadwallet', [walletName]);
+        } catch (error) {
+            this.logger.warn(`loadwallet failed for ${this.coinSymbol}:`, error.message);
+            throw error;
+        }
+    }
+
+    async unloadWallet(walletName) {
+        try {
+            return await this.call('unloadwallet', [walletName]);
+        } catch (error) {
+            this.logger.warn(`unloadwallet failed for ${this.coinSymbol}:`, error.message);
+            return false;
+        }
+    }
+
+    async listWallets() {
+        try {
+            return await this.call('listwallets');
+        } catch (error) {
+            this.logger.warn(`listwallets not supported for ${this.coinSymbol}`);
+            return [];
+        }
+    }
+
+    async getWalletBalance(walletName = '') {
+        try {
+            if (walletName) {
+                // For newer RPC versions with wallet endpoints
+                return await this.call('getbalance');
+            }
+            return await this.getBalance();
+        } catch (error) {
+            this.logger.error(`Failed to get wallet balance for ${this.coinSymbol}:`, error.message);
+            return 0;
+        }
+    }
+
+    // Account-based operations (for older wallet systems)
+    async getAccountAddress(account) {
+        try {
+            return await this.call('getaccountaddress', [account]);
+        } catch (error) {
+            // Fallback to getnewaddress with label
+            return await this.getNewAddress(account);
+        }
+    }
+
+    async setAccount(address, account) {
+        try {
+            return await this.call('setaccount', [address, account]);
+        } catch (error) {
+            this.logger.warn(`setaccount not supported for ${this.coinSymbol}`);
+            return false;
+        }
+    }
+
+    async getAccount(address) {
+        try {
+            return await this.call('getaccount', [address]);
+        } catch (error) {
+            this.logger.warn(`getaccount not supported for ${this.coinSymbol}`);
+            return '';
+        }
+    }
+
     // Create a transaction with specific inputs and outputs
     async createTransaction(inputs, outputs, fee = 0.001) {
         try {

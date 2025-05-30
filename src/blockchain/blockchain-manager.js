@@ -287,6 +287,98 @@ class BlockchainManager {
         }
     }
 
+    // Wallet management methods
+    async createUserWallet(telegramId, coinSymbol) {
+        try {
+            const client = this.getClient(coinSymbol);
+            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            
+            // Try to create a new wallet (for newer daemon versions)
+            try {
+                await client.createWallet(walletName, false, false, '');
+                this.logger.info(`Created new wallet ${walletName} for ${coinSymbol}`);
+            } catch (error) {
+                // If createwallet fails, use account-based approach (older daemons)
+                this.logger.info(`Using account-based wallet for ${coinSymbol} user ${telegramId}`);
+            }
+            
+            // Generate a new address for this user
+            const address = await client.getAccountAddress(walletName);
+            
+            this.logger.info(`Generated address for user ${telegramId} on ${coinSymbol}:`, address);
+            
+            return {
+                address,
+                walletName,
+                coinSymbol
+            };
+            
+        } catch (error) {
+            this.logger.error(`Failed to create wallet for user ${telegramId} on ${coinSymbol}:`, error);
+            throw error;
+        }
+    }
+
+    async getUserWalletAddress(telegramId, coinSymbol) {
+        try {
+            const client = this.getClient(coinSymbol);
+            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            
+            // Try to get existing address for this account
+            const address = await client.getAccountAddress(walletName);
+            return address;
+            
+        } catch (error) {
+            this.logger.error(`Failed to get wallet address for user ${telegramId} on ${coinSymbol}:`, error);
+            throw error;
+        }
+    }
+
+    async getUserWalletBalance(telegramId, coinSymbol) {
+        try {
+            const client = this.getClient(coinSymbol);
+            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            
+            // Get balance for this specific account
+            const balance = await client.getBalance(walletName, 1);
+            return balance || 0;
+            
+        } catch (error) {
+            this.logger.error(`Failed to get wallet balance for user ${telegramId} on ${coinSymbol}:`, error);
+            return 0;
+        }
+    }
+
+    async sendFromUserWallet(telegramId, toAddress, amount, coinSymbol) {
+        try {
+            const client = this.getClient(coinSymbol);
+            const walletName = `tipbot_${telegramId}_${coinSymbol.toLowerCase()}`;
+            
+            // Check balance first
+            const balance = await this.getUserWalletBalance(telegramId, coinSymbol);
+            if (balance < amount) {
+                throw new Error(`Insufficient balance. Available: ${balance}, Required: ${amount}`);
+            }
+            
+            // Send from this specific account
+            const txid = await client.sendToAddress(toAddress, amount, '', '');
+            
+            this.logger.info(`Sent ${amount} ${coinSymbol} from user ${telegramId} to ${toAddress}:`, txid);
+            
+            return {
+                txid,
+                amount,
+                from: walletName,
+                to: toAddress,
+                coinSymbol
+            };
+            
+        } catch (error) {
+            this.logger.error(`Failed to send from user ${telegramId} wallet on ${coinSymbol}:`, error);
+            throw error;
+        }
+    }
+
     // Get blockchain synchronization status
     async getSyncStatus(coinSymbol) {
         try {

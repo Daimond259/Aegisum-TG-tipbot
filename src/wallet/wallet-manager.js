@@ -11,69 +11,63 @@ class WalletManager {
         this.supportedCoins = ['AEGS', 'SHIC', 'PEPE', 'ADVC'];
     }
 
-    // Create a new wallet for a user
-    async createWallet(telegramId, password) {
+    // Create a new wallet for a user using real blockchain wallets
+    async createWallet(telegramId, password = null) {
         try {
-            // Validate password
-            const passwordValidation = ValidationUtils.isValidPassword(password);
-            if (!passwordValidation.valid) {
-                throw new Error(passwordValidation.message);
-            }
-
             // Check if user already exists
             let user = await this.db.getUserByTelegramId(telegramId);
             
-            if (user && user.encrypted_seed) {
-                throw new Error('Wallet already exists for this user');
-            }
-
-            // Generate new mnemonic
-            const mnemonic = this.crypto.generateMnemonic();
-            
-            // Encrypt the mnemonic with user password
-            const encryptedSeed = this.crypto.encrypt(mnemonic, password);
-            const salt = this.crypto.generateSalt();
-
-            // Create or update user record
-            if (!user) {
+            if (user) {
+                // Check if user already has wallets
+                const existingWallets = await this.db.getUserWallets(user.id);
+                if (existingWallets.length > 0) {
+                    throw new Error('Wallet already exists for this user');
+                }
+            } else {
+                // Create new user record
                 await this.db.createUser(telegramId, null, null, null);
                 user = await this.db.getUserByTelegramId(telegramId);
             }
 
-            // Update user with encrypted seed
-            await this.db.run(
-                'UPDATE users SET encrypted_seed = ?, salt = ? WHERE id = ?',
-                [encryptedSeed, salt, user.id]
-            );
-
-            // Generate addresses for all supported coins
+            // Create real blockchain wallets for all supported coins
             const addresses = {};
+            const walletResults = {};
+            
             for (const coin of this.supportedCoins) {
                 try {
-                    const walletData = this.crypto.deriveWalletAddress(mnemonic, coin, 0, 0);
-                    addresses[coin] = walletData.address;
-                    
-                    // Store wallet address in database
-                    await this.db.createWallet(user.id, coin, walletData.address, walletData.derivationPath);
-                    
-                    // Import address for monitoring (if blockchain is available)
                     if (this.blockchain.isCoinSupported(coin)) {
-                        await this.blockchain.importAddress(walletData.address, coin, `tipbot_${telegramId}`);
+                        // Create real wallet on blockchain daemon
+                        const walletData = await this.blockchain.createUserWallet(telegramId, coin);
+                        addresses[coin] = walletData.address;
+                        walletResults[coin] = walletData;
+                        
+                        // Store wallet info in database
+                        await this.db.createWallet(user.id, coin, walletData.address, walletData.walletName);
+                        
+                        // Initialize balance
+                        await this.db.updateBalance(user.id, coin, 0, 0);
+                        
+                        this.logger.info(`Created real ${coin} wallet for user ${telegramId}: ${walletData.address}`);
+                    } else {
+                        this.logger.warn(`${coin} blockchain not available, skipping wallet creation`);
                     }
-                    
-                    // Initialize balance
-                    await this.db.updateBalance(user.id, coin, 0, 0);
                 } catch (error) {
                     this.logger.error(`Failed to create ${coin} wallet for user ${telegramId}:`, error);
+                    // Continue with other coins even if one fails
                 }
             }
 
-            this.logger.info(`Wallet created successfully for user ${telegramId}`);
+            if (Object.keys(addresses).length === 0) {
+                throw new Error('Failed to create any wallets - no blockchain connections available');
+            }
+
+            this.logger.info(`Real blockchain wallets created successfully for user ${telegramId}:`, addresses);
             
             return {
                 success: true,
-                mnemonic, // Return for user backup
-                addresses
+                addresses,
+                walletDetails: walletResults,
+                message: 'Real blockchain wallets created successfully!'
             };
 
         } catch (error) {
@@ -173,7 +167,7 @@ class WalletManager {
         }
     }
 
-    // Get user balances
+    // Get user balances from real blockchain wallets
     async getUserBalances(telegramId) {
         try {
             const user = await this.db.getUserByTelegramId(telegramId);
@@ -181,17 +175,41 @@ class WalletManager {
                 throw new Error('User not found');
             }
 
-            const balances = await this.db.getUserBalances(user.id);
             const result = {};
             
-            // Ensure all supported coins are included
+            // Get real balances from blockchain for each supported coin
             for (const coin of this.supportedCoins) {
-                const balance = balances.find(b => b.coin_symbol === coin);
-                result[coin] = {
-                    confirmed: balance ? parseFloat(balance.confirmed_balance) : 0,
-                    unconfirmed: balance ? parseFloat(balance.unconfirmed_balance) : 0,
-                    total: balance ? parseFloat(balance.confirmed_balance) + parseFloat(balance.unconfirmed_balance) : 0
-                };
+                try {
+                    if (this.blockchain.isCoinSupported(coin)) {
+                        // Get real balance from blockchain daemon
+                        const confirmedBalance = await this.blockchain.getUserWalletBalance(telegramId, coin);
+                        
+                        result[coin] = {
+                            confirmed: confirmedBalance,
+                            unconfirmed: 0, // TODO: Implement unconfirmed balance tracking
+                            total: confirmedBalance
+                        };
+                        
+                        // Update database with current balance
+                        await this.db.updateBalance(user.id, coin, confirmedBalance, 0);
+                    } else {
+                        // Fallback to database balance if blockchain not available
+                        const dbBalance = await this.db.getUserBalance(user.id, coin);
+                        result[coin] = {
+                            confirmed: dbBalance ? parseFloat(dbBalance.confirmed_balance) : 0,
+                            unconfirmed: dbBalance ? parseFloat(dbBalance.unconfirmed_balance) : 0,
+                            total: dbBalance ? parseFloat(dbBalance.confirmed_balance) + parseFloat(dbBalance.unconfirmed_balance) : 0
+                        };
+                    }
+                } catch (error) {
+                    this.logger.error(`Failed to get ${coin} balance for user ${telegramId}:`, error);
+                    // Set zero balance if there's an error
+                    result[coin] = {
+                        confirmed: 0,
+                        unconfirmed: 0,
+                        total: 0
+                    };
+                }
             }
 
             return result;

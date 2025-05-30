@@ -11,7 +11,7 @@ class WorkerManager {
         this.logger = logger;
 
         // Initialize workers
-        this.blockchainMonitor = new BlockchainMonitor(database, blockchainManager, walletManager);
+        this.blockchainMonitor = new BlockchainMonitor(database, blockchainManager, walletManager, telegramBot);
         this.airdropManager = new AirdropManager(database, walletManager, telegramBot);
 
         this.isRunning = false;

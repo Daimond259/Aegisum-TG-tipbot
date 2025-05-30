@@ -2,10 +2,11 @@ const logger = require('../utils/logger');
 const ValidationUtils = require('../utils/validation');
 
 class BlockchainMonitor {
-    constructor(database, blockchainManager, walletManager) {
+    constructor(database, blockchainManager, walletManager, telegramBot = null) {
         this.db = database;
         this.blockchain = blockchainManager;
         this.wallet = walletManager;
+        this.telegramBot = telegramBot;
         this.logger = logger;
         this.isRunning = false;
         this.monitorInterval = 30000; // 30 seconds
@@ -196,6 +197,16 @@ class BlockchainMonitor {
                 groupId: null
             });
 
+            // Send notification to user
+            await this.sendTransactionNotification(wallet.user_id, {
+                type: type,
+                coinSymbol: coinSymbol,
+                amount: amount,
+                txid: txid,
+                status: blockHeight ? 'confirmed' : 'pending',
+                blockHeight: blockHeight
+            });
+
             this.logger.info(`New ${type} detected:`, {
                 coinSymbol,
                 address,
@@ -281,6 +292,18 @@ class BlockchainMonitor {
                             tx.txid,
                             blockHeight
                         );
+
+                        // Send confirmation notification
+                        if (tx.to_user_id) {
+                            await this.sendTransactionNotification(tx.to_user_id, {
+                                type: 'confirmation',
+                                coinSymbol: coinSymbol,
+                                amount: tx.amount,
+                                txid: tx.txid,
+                                status: 'confirmed',
+                                blockHeight: blockHeight
+                            });
+                        }
 
                         this.logger.info(`Transaction confirmed:`, {
                             txid: tx.txid,
@@ -374,11 +397,100 @@ class BlockchainMonitor {
 
         } catch (error) {
             this.logger.error('Failed to get monitoring stats:', error);
-            throw error;
+            throw error
         }
     }
 
-    // Force sync for a specific coin
+    // Send transaction notification to user
+    async sendTransactionNotification(userId, transactionData) {
+        try {
+            if (!this.telegramBot) {
+                this.logger.warn('No Telegram bot available for notifications');
+                return;
+            }
+
+            // Get user's Telegram ID
+            const user = await this.db.get('SELECT telegram_id FROM users WHERE id = ?', [userId]);
+            if (!user) {
+                this.logger.warn(`User not found for notification: ${userId}`);
+                return;
+            }
+
+            const { type, coinSymbol, amount, txid, status, blockHeight } = transactionData;
+            
+            let message = '';
+            let emoji = '';
+
+            switch (type) {
+                case 'deposit':
+                    emoji = '💰';
+                    message = `${emoji} *Deposit ${status === 'confirmed' ? 'Confirmed' : 'Detected'}*\n\n`;
+                    message += `💎 *Amount:* ${amount} ${coinSymbol}\n`;
+                    message += `🔗 *Transaction:* \`${txid}\`\n`;
+                    if (blockHeight) {
+                        message += `📦 *Block:* ${blockHeight}\n`;
+                    }
+                    message += `✅ *Status:* ${status === 'confirmed' ? 'Confirmed' : 'Pending'}\n\n`;
+                    message += `_Powered by Aegisum EcoSystem_`;
+                    break;
+
+                case 'confirmation':
+                    emoji = '✅';
+                    message = `${emoji} *Transaction Confirmed*\n\n`;
+                    message += `💎 *Amount:* ${amount} ${coinSymbol}\n`;
+                    message += `🔗 *Transaction:* \`${txid}\`\n`;
+                    if (blockHeight) {
+                        message += `📦 *Block:* ${blockHeight}\n`;
+                    }
+                    message += `✅ *Status:* Confirmed\n\n`;
+                    message += `_Powered by Aegisum EcoSystem_`;
+                    break;
+
+                case 'withdrawal':
+                    emoji = '📤';
+                    message = `${emoji} *Withdrawal ${status === 'confirmed' ? 'Confirmed' : 'Sent'}*\n\n`;
+                    message += `💎 *Amount:* ${amount} ${coinSymbol}\n`;
+                    message += `🔗 *Transaction:* \`${txid}\`\n`;
+                    if (blockHeight) {
+                        message += `📦 *Block:* ${blockHeight}\n`;
+                    }
+                    message += `✅ *Status:* ${status === 'confirmed' ? 'Confirmed' : 'Pending'}\n\n`;
+                    message += `_Powered by Aegisum EcoSystem_`;
+                    break;
+
+                default:
+                    message = `🔔 *Transaction Update*\n\n`;
+                    message += `💎 *Amount:* ${amount} ${coinSymbol}\n`;
+                    message += `🔗 *Transaction:* \`${txid}\`\n`;
+                    message += `✅ *Status:* ${status}\n\n`;
+                    message += `_Powered by Aegisum EcoSystem_`;
+            }
+
+            // Send notification to user
+            await this.telegramBot.sendMessage(user.telegram_id, message, {
+                parse_mode: 'Markdown',
+                disable_web_page_preview: true
+            });
+
+            this.logger.info(`Transaction notification sent:`, {
+                userId,
+                telegramId: user.telegram_id,
+                type,
+                coinSymbol,
+                amount,
+                txid
+            });
+
+        } catch (error) {
+            this.logger.error('Failed to send transaction notification:', error);
+        }
+    }
+
+    // Set Telegram bot reference for notifications
+    setTelegramBot(telegramBot) {
+        this.telegramBot = telegramBot;
+        this.logger.info('Telegram bot reference set for blockchain monitor notifications');
+    }
     async forceSyncCoin(coinSymbol) {
         try {
             if (!this.blockchain.isCoinSupported(coinSymbol)) {
