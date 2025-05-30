@@ -74,76 +74,22 @@ class CryptoUtils {
         return hashToVerify === hash;
     }
 
-    // Derive wallet addresses from mnemonic
+    // DEPRECATED: This method is no longer used
+    // All address generation now happens via blockchain daemon RPC calls
     deriveWalletAddress(mnemonic, coinSymbol, accountIndex = 0, addressIndex = 0) {
-        try {
-            // Convert mnemonic to seed
-            const seed = bip39.mnemonicToSeedSync(mnemonic);
-            
-            // Create master key
-            const root = bip32.fromSeed(seed);
-            
-            // Define derivation paths for different coins (BIP44)
-            const derivationPaths = {
-                'AEGS': `m/44'/0'/${accountIndex}'/0/${addressIndex}`, // Bitcoin-like
-                'SHIC': `m/44'/0'/${accountIndex}'/0/${addressIndex}`, // Bitcoin-like
-                'PEPE': `m/44'/0'/${accountIndex}'/0/${addressIndex}`, // Bitcoin-like
-                'ADVC': `m/44'/0'/${accountIndex}'/0/${addressIndex}`  // Bitcoin-like
-            };
-
-            const derivationPath = derivationPaths[coinSymbol];
-            if (!derivationPath) {
-                throw new Error(`Unsupported coin: ${coinSymbol}`);
-            }
-
-            // Derive the key
-            const child = root.derivePath(derivationPath);
-            
-            // Generate address based on coin type
-            const address = this._generateAddressFromKey(child, coinSymbol);
-            
-            return {
-                address,
-                derivationPath,
-                publicKey: child.publicKey.toString('hex'),
-                privateKey: child.privateKey.toString('hex')
-            };
-        } catch (error) {
-            throw new Error(`Address derivation failed: ${error.message}`);
-        }
+        throw new Error('DEPRECATED: Address generation now uses blockchain daemon RPC calls only. Use BlockchainManager.createUserWallet() instead.');
     }
 
-    // Generate address from mnemonic and derivation path
+    // DEPRECATED: This method is no longer used
+    // All address generation now happens via blockchain daemon RPC calls
     generateAddress(mnemonic, coinSymbol, accountIndex = 0) {
-        try {
-            const derivationData = this.deriveWalletAddress(mnemonic, coinSymbol, accountIndex);
-            return derivationData.address;
-        } catch (error) {
-            throw new Error(`Address generation failed: ${error.message}`);
-        }
+        throw new Error('DEPRECATED: Address generation now uses blockchain daemon RPC calls only. Use BlockchainManager.createUserWallet() instead.');
     }
 
-    // Generate address from derived key (internal method)
+    // DEPRECATED: This method is no longer used
+    // All address generation now happens via blockchain daemon RPC calls
     _generateAddressFromKey(keyPair, coinSymbol) {
-        // For Bitcoin-like coins, we'll use P2PKH addresses
-        // In a real implementation, you'd need specific address generation for each coin
-        
-        const networks = {
-            'AEGS': bitcoin.networks.bitcoin, // Use appropriate network params
-            'SHIC': bitcoin.networks.bitcoin,
-            'PEPE': bitcoin.networks.bitcoin,
-            'ADVC': bitcoin.networks.bitcoin
-        };
-
-        const network = networks[coinSymbol] || bitcoin.networks.bitcoin;
-        
-        // Generate P2PKH address
-        const { address } = bitcoin.payments.p2pkh({
-            pubkey: keyPair.publicKey,
-            network: network
-        });
-
-        return address;
+        throw new Error('DEPRECATED: Address generation now uses blockchain daemon RPC calls only. Use BlockchainManager.createUserWallet() instead.');
     }
 
     // Generate a secure random string

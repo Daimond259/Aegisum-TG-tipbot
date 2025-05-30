@@ -110,23 +110,25 @@ class WalletManager {
                 [encryptedSeed, salt, user.id]
             );
 
-            // Generate and store addresses for all supported coins
+            // Create real blockchain wallets for all supported coins (no longer using crypto derivation)
             const addresses = {};
             for (const coin of this.supportedCoins) {
                 try {
-                    const walletData = this.crypto.deriveWalletAddress(mnemonic, coin, 0, 0);
-                    addresses[coin] = walletData.address;
-                    
-                    // Store wallet address
-                    await this.db.createWallet(user.id, coin, walletData.address, walletData.derivationPath);
-                    
-                    // Import address for monitoring
                     if (this.blockchain.isCoinSupported(coin)) {
-                        await this.blockchain.importAddress(walletData.address, coin, `tipbot_${telegramId}`);
+                        // Create real wallet on blockchain daemon
+                        const walletData = await this.blockchain.createUserWallet(telegramId, coin);
+                        addresses[coin] = walletData.address;
+                        
+                        // Store wallet info in database
+                        await this.db.createWallet(user.id, coin, walletData.address, walletData.labelName);
+                        
+                        // Initialize balance
+                        await this.db.updateBalance(user.id, coin, 0, 0);
+                        
+                        this.logger.info(`Restored real ${coin} wallet for user ${telegramId}: ${walletData.address}`);
+                    } else {
+                        this.logger.warn(`${coin} blockchain not available, skipping wallet restoration`);
                     }
-                    
-                    // Initialize balance (will be updated by sync)
-                    await this.db.updateBalance(user.id, coin, 0, 0);
                 } catch (error) {
                     this.logger.error(`Failed to restore ${coin} wallet for user ${telegramId}:`, error);
                 }
@@ -286,15 +288,11 @@ class WalletManager {
                 throw new Error('Wallet not found');
             }
 
-            // Decrypt mnemonic
-            const mnemonic = this.crypto.decrypt(user.encrypted_seed, password);
-            if (!mnemonic) {
-                throw new Error('Invalid password');
+            // Get user's wallet address from database
+            const userWallet = await this.db.getUserWallet(user.id, coinSymbol);
+            if (!userWallet) {
+                throw new Error(`No ${coinSymbol} wallet found for user`);
             }
-
-            // Get wallet data
-            const walletData = this.crypto.deriveWalletAddress(mnemonic, coinSymbol, 0, 0);
-            const fromAddress = walletData.address;
 
             // Check balance
             const balance = await this.getUserBalances(telegramId);
@@ -302,13 +300,12 @@ class WalletManager {
                 throw new Error('Insufficient confirmed balance');
             }
 
-            // Send transaction via blockchain
-            const result = await this.blockchain.sendTransaction(
-                fromAddress,
+            // Send transaction via blockchain using real wallet
+            const result = await this.blockchain.sendFromUserWallet(
+                telegramId,
                 toAddress,
                 amount,
-                coinSymbol,
-                walletData.privateKey
+                coinSymbol
             );
 
             // Record transaction in database
