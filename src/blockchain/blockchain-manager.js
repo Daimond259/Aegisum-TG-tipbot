@@ -323,17 +323,21 @@ class BlockchainManager {
             const client = this.getClient(coinSymbol);
             const accountName = `user_${telegramId}`;
             
-            // Try to get existing address for this account
+            // Try to get existing addresses for this account
             try {
-                const address = await client.getAccountAddress(accountName);
+                const addresses = await client.getAddressesByAccount(accountName);
                 
-                // Verify it's still owned by our wallet
-                const addressInfo = await client.getAddressInfo(address);
-                if (addressInfo.ismine) {
-                    return address;
+                // Return the first address if any exist
+                if (addresses && addresses.length > 0) {
+                    // Verify it's still owned by our wallet
+                    const addressInfo = await client.getAddressInfo(addresses[0]);
+                    if (addressInfo.ismine) {
+                        return addresses[0];
+                    }
                 }
             } catch (error) {
-                // Account doesn't exist or address not found
+                // Account doesn't exist or no addresses found
+                this.logger.debug(`No existing addresses for account ${accountName}: ${error.message}`);
             }
             
             // If no existing address or not owned, create a new one

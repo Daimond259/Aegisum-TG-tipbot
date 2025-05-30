@@ -273,6 +273,15 @@ class RPCClient {
         }
     }
 
+    async getAddressesByAccount(account) {
+        try {
+            return await this.call('getaddressesbyaccount', [account]);
+        } catch (error) {
+            this.logger.warn(`getaddressesbyaccount not supported for ${this.coinSymbol}: ${error.message}`);
+            return [];
+        }
+    }
+
     async getAccount(address) {
         try {
             return await this.call('getaccount', [address]);
