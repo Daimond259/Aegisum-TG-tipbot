@@ -19,7 +19,7 @@ class CommunityTipBot {
 
     // Add footer to all bot messages
     addFooter(message) {
-        return `${message}\n\n<i>Powered by Aegisum Eco System</i>`;
+        return `${message}\n\n<i>Powered by Aegisum EcoSystem</i>`;
     }
 
     // Enhanced sendMessage with automatic footer
