@@ -101,8 +101,9 @@ class RPCClient {
     }
 
     // Address and wallet operations
-    async getNewAddress(label = '', addressType = 'legacy') {
-        return this.call('getnewaddress', [label, addressType]);
+    async getNewAddress(label = '') {
+        // Use default address type (bech32) for better compatibility and lower fees
+        return this.call('getnewaddress', [label]);
     }
 
     async validateAddress(address) {

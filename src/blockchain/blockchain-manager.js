@@ -348,6 +348,15 @@ class BlockchainManager {
                 throw new Error(`Generated address ${address} is not owned by wallet`);
             }
             
+            // Import address for monitoring (ensures it's tracked for transactions)
+            try {
+                await client.importAddress(address, labelName, false);
+                this.logger.info(`Address imported for monitoring: ${address}`);
+            } catch (importError) {
+                // Address might already be imported, that's okay
+                this.logger.warn(`Address import warning (likely already imported): ${importError.message}`);
+            }
+            
             // Store address in database for future retrieval
             await this.storeUserAddressInDB(telegramId, coinSymbol, address);
             
