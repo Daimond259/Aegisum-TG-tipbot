@@ -18,7 +18,7 @@ async function debugAllWallets() {
 
         console.log('⛓️  Initializing blockchain manager...');
         const blockchainManager = new BlockchainManager();
-        await blockchainManager.initialize();
+        // BlockchainManager doesn't have initialize method, it auto-initializes
         console.log('✅ Blockchain manager initialized');
 
         console.log('💼 Initializing wallet manager...');
