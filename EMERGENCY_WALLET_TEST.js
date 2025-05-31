@@ -15,7 +15,7 @@ async function emergencyWalletTest() {
         // Initialize exactly like the bot does
         console.log('1. Initializing database...');
         const db = new Database();
-        await db.initialize();
+        await db.connect();
         console.log('✅ Database initialized');
         
         console.log('2. Initializing blockchain manager...');
