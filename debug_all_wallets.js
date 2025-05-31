@@ -52,6 +52,15 @@ async function debugAllWallets() {
 
         try {
             console.log(`\n🔧 Creating wallet for user ID: ${testUserId}`);
+            
+            // Test isCoinSupported for each coin
+            console.log('\n🔍 Testing coin support:');
+            const supportedCoins = ['AEGS', 'SHIC', 'PEPE', 'ADVC'];
+            for (const coin of supportedCoins) {
+                const isSupported = blockchainManager.isCoinSupported(coin);
+                console.log(`${coin}: ${isSupported ? '✅ Supported' : '❌ Not supported'}`);
+            }
+            
             const result = await walletManager.createWallet(testUserId, testPassword);
             
             console.log('\n📋 WALLET CREATION RESULT:');
