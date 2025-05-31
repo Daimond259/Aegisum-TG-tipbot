@@ -51,16 +51,20 @@ async function debugAllWallets() {
         const testPassword = 'TestPassword123!';
 
         try {
+            console.log(`\n🔧 Creating wallet for user ID: ${testUserId}`);
             const result = await walletManager.createWallet(testUserId, testPassword);
             
             console.log('\n📋 WALLET CREATION RESULT:');
             console.log('Success:', result.success);
             console.log('Addresses created:', Object.keys(result.addresses || {}));
+            console.log('Total addresses:', Object.keys(result.addresses || {}).length);
             
             if (result.addresses) {
                 for (const [coin, address] of Object.entries(result.addresses)) {
                     console.log(`${coin}: ${address}`);
                 }
+            } else {
+                console.log('❌ No addresses were created!');
             }
             
             if (result.error) {
