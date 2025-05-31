@@ -326,7 +326,15 @@ class BlockchainManager {
             const existingAddress = await this.getUserAddressFromDB(telegramId, coinSymbol);
             if (existingAddress) {
                 // Verify it's still owned by our wallet
-                const addressInfo = await client.getAddressInfo(existingAddress);
+                let addressInfo;
+                try {
+                    // Try getAddressInfo first (newer coins like AEGS)
+                    addressInfo = await client.getAddressInfo(existingAddress);
+                } catch (error) {
+                    // Fallback to validateAddress for older coins (SHIC, PEPE, ADVC)
+                    addressInfo = await client.validateAddress(existingAddress);
+                }
+                
                 if (addressInfo.ismine) {
                     this.logger.info(`Using existing wallet for user ${telegramId} on ${coinSymbol}: ${existingAddress}`);
                     return {
@@ -343,7 +351,15 @@ class BlockchainManager {
             const address = await client.getNewAddress(labelName);
             
             // Verify the address is owned by our wallet
-            const addressInfo = await client.getAddressInfo(address);
+            let addressInfo;
+            try {
+                // Try getAddressInfo first (newer coins like AEGS)
+                addressInfo = await client.getAddressInfo(address);
+            } catch (error) {
+                // Fallback to validateAddress for older coins (SHIC, PEPE, ADVC)
+                addressInfo = await client.validateAddress(address);
+            }
+            
             if (!addressInfo.ismine) {
                 throw new Error(`Generated address ${address} is not owned by wallet`);
             }
