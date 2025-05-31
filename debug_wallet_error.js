@@ -13,18 +13,18 @@ async function debugWalletError() {
         // Initialize database
         console.log('📊 Initializing database...');
         const database = new Database();
-        await database.initialize();
-        console.log('✅ Database initialized');
+        await database.connect();
+        console.log('✅ Database connected');
 
         // Initialize blockchain manager
         console.log('⛓️  Initializing blockchain manager...');
         const blockchainManager = new BlockchainManager();
-        await blockchainManager.initialize();
         console.log('✅ Blockchain manager initialized');
 
-        // Check which coins are connected
-        const status = await blockchainManager.getConnectionStatus();
-        console.log('🔗 Connection status:', status);
+        // Test connections
+        console.log('🔗 Testing blockchain connections...');
+        const connectionResults = await blockchainManager.testConnections();
+        console.log('📊 Connection results:', connectionResults);
 
         // Initialize wallet manager with proper dependencies
         console.log('💼 Initializing wallet manager...');
