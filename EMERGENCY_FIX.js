@@ -87,6 +87,27 @@ async function testWalletCreation(blockchainManager) {
     const testPassword = 'TestPassword123!';
     
     try {
+        console.log('\n🔧 Testing wallet creation with detailed logging...');
+        
+        // Test each coin individually first
+        console.log('\n🔍 Testing individual coin wallet creation:');
+        for (const coin of ['AEGS', 'SHIC', 'PEPE', 'ADVC']) {
+            try {
+                console.log(`\n--- Testing ${coin} ---`);
+                console.log(`isCoinSupported(${coin}):`, blockchainManager.isCoinSupported(coin));
+                
+                if (blockchainManager.isCoinSupported(coin)) {
+                    const walletData = await blockchainManager.createUserWallet(testUserId + Math.random(), coin);
+                    console.log(`✅ ${coin} wallet created: ${walletData.address}`);
+                } else {
+                    console.log(`❌ ${coin} not supported`);
+                }
+            } catch (error) {
+                console.log(`❌ ${coin} failed: ${error.message}`);
+            }
+        }
+        
+        console.log('\n🔧 Now testing full wallet creation...');
         const result = await walletManager.createWallet(testUserId, testPassword);
         console.log('\n📋 WALLET CREATION RESULT:');
         console.log('Success:', result.success);
