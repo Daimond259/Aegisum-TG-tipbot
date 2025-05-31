@@ -49,7 +49,6 @@ async function testBlockchainConnections() {
     const blockchainManager = new BlockchainManager();
     
     try {
-        await blockchainManager.initialize();
         console.log('✅ Blockchain manager initialized');
         
         // Test each coin
