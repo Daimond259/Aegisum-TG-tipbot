@@ -46,8 +46,8 @@ async function debugAllWallets() {
             }
         }
 
-        console.log('\n📝 Testing wallet creation for test user...');
-        const testUserId = 999999999;
+        console.log('\n📝 Testing wallet creation for fresh test user...');
+        const testUserId = Math.floor(Math.random() * 1000000000); // Random user ID
         const testPassword = 'TestPassword123!';
 
         try {
