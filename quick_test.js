@@ -10,10 +10,10 @@ async function quickTest() {
     const axios = require('axios');
     
     const daemons = {
-        'AEGS': { port: 9332, user: process.env.AEGS_RPC_USER, pass: process.env.AEGS_RPC_PASSWORD },
-        'SHIC': { port: 22555, user: process.env.SHIC_RPC_USER, pass: process.env.SHIC_RPC_PASSWORD },
-        'PEPE': { port: 33873, user: process.env.PEPE_RPC_USER, pass: process.env.PEPE_RPC_PASSWORD },
-        'ADVC': { port: 9335, user: process.env.ADVC_RPC_USER, pass: process.env.ADVC_RPC_PASSWORD }
+        'AEGS': { port: process.env.AEGS_RPC_PORT || 8332, user: process.env.AEGS_RPC_USER, pass: process.env.AEGS_RPC_PASS },
+        'SHIC': { port: process.env.SHIC_RPC_PORT || 8333, user: process.env.SHIC_RPC_USER, pass: process.env.SHIC_RPC_PASS },
+        'PEPE': { port: process.env.PEPE_RPC_PORT || 8334, user: process.env.PEPE_RPC_USER, pass: process.env.PEPE_RPC_PASS },
+        'ADVC': { port: process.env.ADVC_RPC_PORT || 8335, user: process.env.ADVC_RPC_USER, pass: process.env.ADVC_RPC_PASS }
     };
 
     for (const [coin, config] of Object.entries(daemons)) {
