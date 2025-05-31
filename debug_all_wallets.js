@@ -38,8 +38,8 @@ async function debugAllWallets() {
                 console.log(`${coin}: ${isSupported ? '✅ Connected' : '❌ Not connected'}`);
                 
                 if (isSupported) {
-                    const info = await blockchainManager.getBlockchainInfo(coin);
-                    console.log(`  Block height: ${info.blocks}`);
+                    const height = await blockchainManager.getBlockHeight(coin);
+                    console.log(`  Block height: ${height}`);
                 }
             } catch (error) {
                 console.log(`${coin}: ❌ Error - ${error.message}`);
