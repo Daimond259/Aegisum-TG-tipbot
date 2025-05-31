@@ -22,7 +22,7 @@ class RPCClient {
     async call(method, params = []) {
         try {
             const response = await axios.post(this.baseURL, {
-                jsonrpc: '2.0',
+                jsonrpc: '1.0',
                 id: Date.now(),
                 method: method,
                 params: params
