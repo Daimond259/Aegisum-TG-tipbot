@@ -140,6 +140,17 @@ class Database {
         return this.run(sql, [telegramId]);
     }
 
+    async updateUser(userId, updates) {
+        const fields = Object.keys(updates);
+        const values = Object.values(updates);
+        const setClause = fields.map(field => `${field} = ?`).join(', ');
+        
+        const sql = `UPDATE users SET ${setClause} WHERE id = ?`;
+        values.push(userId);
+        
+        return this.run(sql, values);
+    }
+
     // Wallet management methods
     async createWallet(userId, coinSymbol, address, derivationPath) {
         const sql = `

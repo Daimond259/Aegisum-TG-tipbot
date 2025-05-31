@@ -29,6 +29,25 @@ class WalletManager {
                 user = await this.db.getUserByTelegramId(telegramId);
             }
 
+            // Generate mnemonic for wallet recovery
+            const mnemonic = this.crypto.generateMnemonic();
+            this.logger.info(`Generated mnemonic for user ${telegramId}`);
+
+            // Encrypt and store mnemonic if password provided
+            let encryptedWallet = null;
+            if (password) {
+                const walletData = {
+                    mnemonic: mnemonic,
+                    telegramId: telegramId,
+                    createdAt: new Date().toISOString()
+                };
+                encryptedWallet = this.crypto.encryptWallet(JSON.stringify(walletData), password);
+                
+                // Update user with encrypted wallet
+                await this.db.updateUser(user.id, { encrypted_wallet: encryptedWallet });
+                this.logger.info(`Encrypted wallet stored for user ${telegramId}`);
+            }
+
             // Create real blockchain wallets for all supported coins
             const addresses = {};
             const walletResults = {};
@@ -65,9 +84,11 @@ class WalletManager {
             
             return {
                 success: true,
+                mnemonic: mnemonic,
                 addresses,
                 walletDetails: walletResults,
-                message: 'Real blockchain wallets created successfully!'
+                message: 'Real blockchain wallets created successfully!',
+                encrypted: !!password
             };
 
         } catch (error) {
