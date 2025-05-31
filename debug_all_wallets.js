@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Load environment variables from the correct path
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
 const Database = require('./src/database/database');
 const BlockchainManager = require('./src/blockchain/blockchain-manager');
 const WalletManager = require('./src/wallet/wallet-manager');

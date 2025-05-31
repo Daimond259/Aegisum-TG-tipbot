@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-require('dotenv').config();
+// Load environment variables from the correct path
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 console.log('🔍 DEBUGGING ENVIRONMENT VARIABLES');
 console.log('==================================\n');
