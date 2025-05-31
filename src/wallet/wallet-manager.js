@@ -52,9 +52,13 @@ class WalletManager {
             const addresses = {};
             const walletResults = {};
             
+            this.logger.info(`Creating wallets for user ${telegramId}, supported coins: ${this.supportedCoins.join(', ')}`);
+            
             for (const coin of this.supportedCoins) {
                 try {
+                    this.logger.info(`Checking if ${coin} is supported...`);
                     if (this.blockchain.isCoinSupported(coin)) {
+                        this.logger.info(`${coin} is supported, creating wallet...`);
                         // Create real wallet on blockchain daemon
                         const walletData = await this.blockchain.createUserWallet(telegramId, coin);
                         addresses[coin] = walletData.address;
