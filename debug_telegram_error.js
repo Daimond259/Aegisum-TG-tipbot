@@ -60,7 +60,7 @@ async function debugTelegramError() {
         if (user) {
             console.log('User ID:', user.id);
             console.log('Telegram ID:', user.telegram_id);
-            console.log('Has encrypted wallet:', !!user.encrypted_wallet);
+            console.log('Has encrypted wallet:', !!user.encrypted_seed);
         }
         
     } catch (error) {

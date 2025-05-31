@@ -44,7 +44,7 @@ class WalletManager {
                 encryptedWallet = this.crypto.encrypt(JSON.stringify(walletData), password);
                 
                 // Update user with encrypted wallet
-                await this.db.updateUser(user.id, { encrypted_wallet: encryptedWallet });
+                await this.db.updateUser(user.id, { encrypted_seed: encryptedWallet });
                 this.logger.info(`Encrypted wallet stored for user ${telegramId}`);
             }
 
