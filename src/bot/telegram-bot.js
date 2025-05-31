@@ -774,16 +774,30 @@ AEGS, SHIC, PEPE, ADVC
             return;
         }
 
-        const result = await this.wallet.createWallet(msg.from.id, password);
-        
-        if (result.success) {
-            await this.sendMessage(msg.chat.id, 
-                '✅ Wallet created successfully!\n\n' +
-                '🔑 BACKUP PHRASE (SAVE THIS SAFELY!):\n' +
-                `\`${result.mnemonic}\`\n\n` +
-                '⚠️ Write this down and store it safely. You\'ll need it to recover your wallet!\n\n' +
-                'Use /balance to check your balances.',
-                { parse_mode: 'Markdown' }
+        try {
+            const result = await this.wallet.createWallet(msg.from.id, password);
+            
+            if (result.success) {
+                await this.sendMessage(msg.chat.id, 
+                    '✅ Wallet created successfully!\n\n' +
+                    '🔑 BACKUP PHRASE (SAVE THIS SAFELY!):\n' +
+                    `\`${result.mnemonic}\`\n\n` +
+                    '⚠️ Write this down and store it safely. You\'ll need it to recover your wallet!\n\n' +
+                    'Use /balance to check your balances.',
+                    { parse_mode: 'Markdown' }
+                );
+            } else {
+                await this.sendMessage(msg.chat.id,
+                    '❌ Failed to create wallet: ' + (result.error || 'Unknown error') + '\n\n' +
+                    'Please try again with /start'
+                );
+            }
+        } catch (error) {
+            this.logger.error('Wallet creation error:', error);
+            await this.sendMessage(msg.chat.id,
+                '❌ An error occurred while creating your wallet:\n' +
+                error.message + '\n\n' +
+                'Please try again with /start'
             );
         }
 
